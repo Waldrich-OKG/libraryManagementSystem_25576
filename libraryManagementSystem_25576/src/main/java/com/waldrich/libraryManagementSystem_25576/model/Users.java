@@ -44,6 +44,11 @@ public class Users {
     private boolean enabled = true;
     private LocalDateTime lastLogin;
 
+    private String otpCode;
+    private LocalDateTime otpExpiry;
+    private boolean otpVerified;
+    private int otpAttempts;
+
 
     @ManyToOne
     @JoinColumn(name = "location_id")
