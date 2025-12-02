@@ -1,5 +1,6 @@
 package com.waldrich.libraryManagementSystem_25576.model;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 import com.waldrich.libraryManagementSystem_25576.enums.UserRole;
@@ -36,6 +37,13 @@ public class Users {
 
     @Enumerated(EnumType.STRING)
     private UserRole role;
+
+    private String refreshToken;
+    private LocalDateTime tokenCreatedAt;
+    private LocalDateTime tokenExpiry;
+    private boolean enabled = true;
+    private LocalDateTime lastLogin;
+
 
     @ManyToOne
     @JoinColumn(name = "location_id")
