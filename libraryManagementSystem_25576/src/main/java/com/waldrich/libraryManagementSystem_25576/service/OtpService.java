@@ -1,43 +1,66 @@
 package com.waldrich.libraryManagementSystem_25576.service;
 
 import java.time.LocalDateTime;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Random;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+
+import com.waldrich.libraryManagementSystem_25576.model.Users;
+import com.waldrich.libraryManagementSystem_25576.repository.UsersRepository;
 
 @Service
 public class OtpService {
-    
-    private final Map<String, OtpData> otpStorage = new HashMap<>();
 
-    private static class OtpData {
-        String otp;
-        LocalDateTime expiryTime;
-        OtpData(String otp, LocalDateTime expiryTime) {
-            this.otp = otp;
-            this.expiryTime = expiryTime;
+    @Autowired
+    private UsersRepository userRepository;
+
+    private final Random random = new Random();
+
+    public String generateOtp(String email) {
+        Users user = userRepository.findByEmail(email);
+        if (user == null) {
+            throw new RuntimeException("User not found");
         }
-    }
+            
 
-    public String generateOtp(String username) {
-        String otp = String.format("%06d", new Random().nextInt(999999));
-        otpStorage.put(username, new OtpData(otp, LocalDateTime.now().plusMinutes(5)));
+        String otp = String.format("%06d", random.nextInt(999999));
+        user.setOtpCode(otp);
+        user.setOtpExpiry(LocalDateTime.now().plusMinutes(5));
+        user.setOtpVerified(false);
+        user.setOtpAttempts(0);
+
+        userRepository.save(user);
         return otp;
     }
 
-    public boolean validateOtp(String username, String otp) {
-        if (!otpStorage.containsKey(username)) return false;
-        OtpData data = otpStorage.get(username);
 
-        if (data.expiryTime.isBefore(LocalDateTime.now())) {
-            otpStorage.remove(username);
+    public boolean validateOtp(String email, String otp) {
+        Users user = userRepository.findByEmail(email);
+        if (user == null) {
+            throw new RuntimeException("User not found");
+        }
+
+        if (user.getOtpExpiry().isBefore(LocalDateTime.now())) {
+            user.setOtpCode(null);
+            userRepository.save(user);
             return false;
         }
 
-        boolean isValid = data.otp.equals(otp);
-        if (isValid) otpStorage.remove(username);
+        if (user.getOtpAttempts() >= 3) {
+            return false; // too many attempts
+        }
+
+        boolean isValid = otp.equals(user.getOtpCode());
+        user.setOtpAttempts(user.getOtpAttempts() + 1);
+
+        if (isValid) {
+            user.setOtpVerified(true);
+            user.setOtpCode(null); // clear OTP after success
+        }
+
+        userRepository.save(user);
         return isValid;
     }
+
 }
