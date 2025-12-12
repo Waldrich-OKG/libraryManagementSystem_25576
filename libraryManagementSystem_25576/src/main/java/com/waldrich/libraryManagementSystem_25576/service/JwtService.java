@@ -13,6 +13,8 @@ import javax.crypto.SecretKey;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
+import com.waldrich.libraryManagementSystem_25576.model.Users;
+
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
@@ -32,14 +34,15 @@ public class JwtService {
         }
     }     
 
-    public String generateToken(String username) {
+    public String generateToken(Users user) {
         Map<String,Object> claims = new HashMap<>();
+        claims.put("role", user.getRole().name());
         return Jwts.builder()
                 .claims()
                 .add(claims)
-                .subject(username)
+                .subject(user.getEmail())
                 .issuedAt(new Date(System.currentTimeMillis()))
-                .expiration(new Date(System.currentTimeMillis() + 60 * 60 * 30))
+                .expiration(new Date(System.currentTimeMillis() + 1000 * 60 * 15))
                 .and()
                 .signWith(getKey())
                 .compact();
@@ -54,6 +57,10 @@ public class JwtService {
 
     public String extractUsername(String token) {
         return extractClaim(token, Claims::getSubject);
+    }
+
+    public String extractRole(String token) {
+        return extractClaim(token, claims -> claims.get("role", String.class));
     }
 
     private <T> T extractClaim(String token, Function<Claims, T> claimResolver) {
