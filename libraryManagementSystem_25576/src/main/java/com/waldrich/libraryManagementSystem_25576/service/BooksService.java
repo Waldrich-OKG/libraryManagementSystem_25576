@@ -10,6 +10,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
+import com.waldrich.libraryManagementSystem_25576.dto.BookDTO;
 import com.waldrich.libraryManagementSystem_25576.enums.BookCategory;
 import com.waldrich.libraryManagementSystem_25576.model.Books;
 import com.waldrich.libraryManagementSystem_25576.repository.BooksRepository;
@@ -24,11 +25,32 @@ public class BooksService {
         return booksRepository.save(book);
     }
 
-    public Page<Books> getAllBooks(int page, int size, String sortBy, String direction) {
+    public Page<BookDTO> getAllBooks(int page, int size, String sortBy, String direction) {
         Sort sort = direction.equalsIgnoreCase("desc") ? Sort.by(sortBy).descending() : Sort.by(sortBy).ascending();
         Pageable pageable = PageRequest.of(page, size, sort);
-        return booksRepository.findAll(pageable);
+        Page<Books> bookPage = booksRepository.findAll(pageable);
+        return bookPage.map(BookDTO::new);
     }
+
+    public Page<BookDTO> searchBooks(String keyword, int page, int size, String sortBy, String direction) {
+        Sort sort = direction.equalsIgnoreCase("desc") ? Sort.by(sortBy).descending() : Sort.by(sortBy).ascending();
+        Pageable pageable = PageRequest.of(page, size, sort);
+
+        Page<Books> bookPage = booksRepository.searchBooks(keyword, pageable);
+        return bookPage.map(BookDTO::new);
+    }
+
+    // public Page<BookDTO> searchBooks(String keyword, int page, int size, String sortBy, String direction) {
+    //     Sort sort = direction.equalsIgnoreCase("desc") ? Sort.by(sortBy).descending() : Sort.by(sortBy).ascending();
+    //     Pageable pageable = PageRequest.of(page, size, sort);
+
+    //     Page<Books> bookPage = booksRepository
+    //         .findByTitleContainingIgnoreCaseOrAuthorContainingIgnoreCaseOrCategoryContainingIgnoreCaseOrLanguageContainingIgnoreCaseOrYearOfPublicationContainingIgnoreCaseOrBookStatusContainingIgnoreCase(
+    //             keyword, keyword, keyword, keyword, keyword, keyword, pageable
+    //         );
+
+    //     return bookPage.map(BookDTO::new);
+    // }
 
     public Books getBookById(Long bookId) {
         return booksRepository.findById(bookId).orElseThrow(() -> new RuntimeException("Book with id " + bookId + " not found"));

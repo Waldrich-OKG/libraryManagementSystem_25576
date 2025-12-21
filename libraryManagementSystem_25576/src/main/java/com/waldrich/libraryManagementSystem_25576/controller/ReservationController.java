@@ -5,7 +5,10 @@ import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -15,8 +18,10 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.waldrich.libraryManagementSystem_25576.dto.ReservationDTO;
 import com.waldrich.libraryManagementSystem_25576.enums.ReservationStatus;
 import com.waldrich.libraryManagementSystem_25576.model.Reservations;
+import com.waldrich.libraryManagementSystem_25576.model.UserPrincipal;
 import com.waldrich.libraryManagementSystem_25576.service.ReservationService;
 
 @RestController
@@ -33,18 +38,37 @@ public class ReservationController {
     }
 
     @GetMapping("/all")
-    public ResponseEntity<Page<Reservations>> getAllReservations(
+    public ResponseEntity<Page<ReservationDTO>> getAllReservations(
         @RequestParam(defaultValue = "0") int page,
-        @RequestParam(defaultValue = "10") int size,
+        @RequestParam(defaultValue = "5") int size,
         @RequestParam(defaultValue = "reservationId") String sortBy,
         @RequestParam(defaultValue = "asc") String direction
     ) {
         return ResponseEntity.ok(reservationService.getAllReservations(page, size, sortBy, direction));
     }
 
-    @GetMapping("/user/{userId}")
-    public ResponseEntity<List<Reservations>> getReservationsByUserId(@PathVariable Long userId) {
-        return ResponseEntity.ok(reservationService.getReservationsByUserId(userId));
+    @GetMapping("/user")
+    @PreAuthorize("hasRole('USER')")
+    public Page<ReservationDTO> getUserReservations(@RequestParam int page, @RequestParam int size, UserPrincipal principal) {
+        Long userId = principal.getId();
+        Pageable pageable = PageRequest.of(page, size);
+        return reservationService.getUserReservations(userId, pageable);
+    }
+
+    @GetMapping("/search")
+    @PreAuthorize("hasAnyRole('ADMIN','LIBRARIAN','REGULAR')")
+    public Page<ReservationDTO> searchReservations(
+        @RequestParam String column,
+        @RequestParam String keyword,
+        @RequestParam(defaultValue = "0") int page,
+        @RequestParam(defaultValue = "10") int size,
+        UserPrincipal principal
+    ) {
+        Pageable pageable = PageRequest.of(page, size);
+        if (principal.getRole().equals("REGULAR")) {
+            return reservationService.searchReservationsForUser(principal.getId(), column, keyword, pageable);
+        }
+        return reservationService.searchReservations(column, keyword, pageable);
     }
 
     @GetMapping("/date/{reservationDate}")

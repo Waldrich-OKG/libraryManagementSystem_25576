@@ -41,7 +41,6 @@ public class Users {
     private String refreshToken;
     private LocalDateTime tokenCreatedAt;
     private LocalDateTime tokenExpiry;
-    private boolean enabled = true;
     private LocalDateTime lastLogin;
 
     private String otpCode;

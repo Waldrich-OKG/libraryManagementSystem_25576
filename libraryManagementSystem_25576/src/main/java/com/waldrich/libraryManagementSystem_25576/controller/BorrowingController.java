@@ -1,11 +1,12 @@
 package com.waldrich.libraryManagementSystem_25576.controller;
 
-import java.util.List;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -15,7 +16,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.waldrich.libraryManagementSystem_25576.dto.BorrowingDTO;
 import com.waldrich.libraryManagementSystem_25576.model.Borrowings;
+import com.waldrich.libraryManagementSystem_25576.model.UserPrincipal;
 import com.waldrich.libraryManagementSystem_25576.service.BorrowingsService;
 
 @RestController
@@ -32,19 +35,40 @@ public class BorrowingController {
     }
 
     @GetMapping("/all")
-    public ResponseEntity<Page<Borrowings>> getAllBorrowings(
+    @PreAuthorize("hasAnyRole('ADMIN','LIBRARIAN')")
+    public ResponseEntity<Page<BorrowingDTO>> getAllBorrowings(
         @RequestParam(defaultValue = "0") int page,
-        @RequestParam(defaultValue = "10") int size,
+        @RequestParam(defaultValue = "5") int size,
         @RequestParam(defaultValue = "borrowingId") String sortBy,
         @RequestParam(defaultValue = "asc") String direction
     ) {
         return ResponseEntity.ok(borrowingsService.getAllBorrowings(page, size, sortBy, direction));
     }
 
-    @GetMapping("/user/{userId}")
-    public ResponseEntity<List<Borrowings>> getBorrowingsByUserId(@PathVariable Long userId) {
-        return ResponseEntity.ok(borrowingsService.getBorrowingsByUserId(userId));
+    @GetMapping("/user")
+    @PreAuthorize("hasRole('REGULAR')")
+    public Page<BorrowingDTO> getUserBorrowings(@RequestParam int page, @RequestParam int size, UserPrincipal principal) {
+        Long userId = principal.getId();
+        Pageable pageable = PageRequest.of(page, size);
+        return borrowingsService.getUserBorrowings(userId, pageable);
     }
+
+    @GetMapping("/search")
+    @PreAuthorize("hasAnyRole('ADMIN','LIBRARIAN','REGULAR')")
+    public Page<BorrowingDTO> searchBorrowings(
+        @RequestParam String column,
+        @RequestParam String keyword,
+        @RequestParam(defaultValue = "0") int page,
+        @RequestParam(defaultValue = "10") int size,
+        UserPrincipal principal
+    ) {
+        Pageable pageable = PageRequest.of(page, size);
+        if (principal.getAuthorities().toString().equals("ROLE_REGULAR")) {
+            return borrowingsService.searchBorrowingsForUser(principal.getId(), column, keyword, pageable);
+        }
+        return borrowingsService.searchBorrowings(column, keyword, pageable);
+    }
+
 
     @GetMapping("/one/{id}")
     public ResponseEntity<Borrowings> getBorrowingById(@PathVariable Long id) {

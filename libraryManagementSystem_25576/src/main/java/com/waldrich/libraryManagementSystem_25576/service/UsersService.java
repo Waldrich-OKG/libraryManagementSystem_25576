@@ -9,12 +9,16 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import com.waldrich.libraryManagementSystem_25576.dto.UserDTO;
 import com.waldrich.libraryManagementSystem_25576.enums.LocationType;
+import com.waldrich.libraryManagementSystem_25576.enums.UserRole;
 import com.waldrich.libraryManagementSystem_25576.exceptionsHandler.EmailAlreadyTakenException;
 import com.waldrich.libraryManagementSystem_25576.exceptionsHandler.UserNotFoundException;
 import com.waldrich.libraryManagementSystem_25576.model.Location;
+import com.waldrich.libraryManagementSystem_25576.model.UserPrincipal;
 import com.waldrich.libraryManagementSystem_25576.model.Users;
 import com.waldrich.libraryManagementSystem_25576.repository.LocationRepository;
 import com.waldrich.libraryManagementSystem_25576.repository.UsersRepository;
@@ -28,18 +32,39 @@ public class UsersService {
     @Autowired
     private LocationRepository locationRepository;
 
+    private BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
+
     public Users saveUser(Users user){
         if(usersRepository.existsByEmail(user.getEmail())){
             throw new EmailAlreadyTakenException(user.getEmail());
         }
+
+        user.setPassword(encoder.encode(user.getPassword()));
         return usersRepository.save(user);
     }
 
-    public Page<Users> getAllUsers(int page, int size, String sortBy, String direction){
+    public Page<UserDTO> getAllUsers(int page, int size, String sortBy, String direction){
         Sort sort = direction.equalsIgnoreCase("desc") ? Sort.by(sortBy).descending() : Sort.by(sortBy).ascending();
         Pageable pageable = PageRequest.of(page, size, sort);
-        return usersRepository.findAll(pageable);
+        return usersRepository.findAll(pageable).map(UserDTO::new);
     }
+
+    public Page<UserDTO> searchUsers(String column, String keyword, Pageable pageable) {
+    switch (column) {
+        case "userId":
+            return usersRepository.findByUserId(Long.valueOf(keyword), pageable).map(UserDTO::new);
+        case "firstName":
+            return usersRepository.findByFirstNameContainingIgnoreCase(keyword, pageable).map(UserDTO::new);
+        case "lastName":
+            return usersRepository.findByLastNameContainingIgnoreCase(keyword, pageable).map(UserDTO::new);
+        case "email":
+            return usersRepository.findByEmailContainingIgnoreCase(keyword, pageable).map(UserDTO::new);
+        case "role":
+            return usersRepository.findByRole(UserRole.valueOf(keyword.toUpperCase()), pageable).map(UserDTO::new);
+        default:
+            return Page.empty(pageable);
+    }
+}
 
     public Users getUserById(Long id){
         return usersRepository.findById(id).orElseThrow(()-> new UserNotFoundException(id));
@@ -94,6 +119,10 @@ public class UsersService {
 
     public List<Location> getAllProvinces() {
         return locationRepository.findByType(LocationType.PROVINCE);
+    }
+
+    public Long getUserIdFromPrincipal(UserPrincipal principal) {
+        return principal.getId();
     }
 
 
