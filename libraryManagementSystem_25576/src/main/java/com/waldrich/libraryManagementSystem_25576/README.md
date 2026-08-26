@@ -21,6 +21,7 @@ The project demonstrates RESTful API design, database integration, and role-base
   - Maven (build tool)
 
 # Project Structure
+/* FOR A BETTER VIEW OF THE PROJECT STRUCTURE, CLICK ON Code INSTEAD OF Preview */
 src\
     main\
         java\com\waldrich\libraryManagementSystem_25576\
